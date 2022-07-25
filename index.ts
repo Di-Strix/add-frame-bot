@@ -8,6 +8,15 @@ if (!process.env.TG_BOT_TOKEN)
 
 const bot = new Telegraf(process.env.TG_BOT_TOKEN)
 
+bot.start(ctx => {
+  ctx.reply(
+    `
+Мои команды: 
+- add_frame - Добавить рамку к фотографии. 
+Можно дополнительно указать ширину рамки (по умолчанию - 8 пикселей) просто написав новую ширину в пикселях после команды в том же сообщении. Так же можно указать цвет рамки, задаётся в виде 24- или 48-битного HEX числа после #. Например: #00FF00`
+  )
+})
+
 bot.command('add_frame', async ctx => {
   const normalizeHex = (hexString: string): string[] => {
     return (
