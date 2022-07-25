@@ -11,6 +11,8 @@ const bot = new Telegraf(process.env.TG_BOT_TOKEN)
 bot.command('add_frame', async ctx => {
   console.log('Got message, processing...')
   try {
+    const frameSize = +(ctx.message.text.match(/(?<= )\d*(?! .)/)?.[0] || 8)
+
     const url = await ctx.telegram.getFileLink(
       (ctx.message.reply_to_message as any).photo.at(-1).file_id
     )
@@ -23,10 +25,10 @@ bot.command('add_frame', async ctx => {
 
     const buffer = await photo
       .extend({
-        top: 10,
-        bottom: 10,
-        left: 10,
-        right: 10,
+        top: frameSize,
+        bottom: frameSize,
+        left: frameSize,
+        right: frameSize,
         background: { r: 255, g: 255, b: 255 },
       })
       .toBuffer()
