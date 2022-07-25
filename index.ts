@@ -34,7 +34,7 @@ bot.command('add_frame', async ctx => {
     await ctx.replyWithPhoto({ source: buffer }, { caption: `Aparecium!` })
     console.log('Done, replied with image')
   } catch (e) {
-    await ctx.reply('Пожалуйста, отвечайте этой командой на сообщение с фотографией')
+    await ctx.reply('Фото не получено 💁')
     console.log('Something went wrong, replied with message')
   }
 })
