@@ -9,6 +9,7 @@ if (!process.env.TG_BOT_TOKEN)
 const bot = new Telegraf(process.env.TG_BOT_TOKEN)
 
 bot.command('add_frame', async ctx => {
+  console.log('Got message, processing...')
   try {
     const url = await ctx.telegram.getFileLink(
       (ctx.message.reply_to_message as any).photo.at(-1).file_id
@@ -30,10 +31,12 @@ bot.command('add_frame', async ctx => {
       })
       .toBuffer()
 
-    ctx.replyWithPhoto({ source: buffer }, { caption: `Aparecium!` })
+    await ctx.replyWithPhoto({ source: buffer }, { caption: `Aparecium!` })
+    console.log('Done, replied with image')
   } catch (e) {
-    ctx.reply('Пожалуйста, отвечайте этой командой на сообщение с фотографией')
+    await ctx.reply('Пожалуйста, отвечайте этой командой на сообщение с фотографией')
+    console.log('Something went wrong, replied with message')
   }
 })
 
-bot.launch()
+bot.launch().then(() => console.log('Bot has been started successfully'))
