@@ -9,9 +9,30 @@ if (!process.env.TG_BOT_TOKEN)
 const bot = new Telegraf(process.env.TG_BOT_TOKEN)
 
 bot.command('add_frame', async ctx => {
+  const normalizeHex = (hexString: string): string[] => {
+    return (
+      ([3, 6].includes(hexString.length) &&
+        hexString
+          .match(new RegExp(`.{${hexString.length / 3}}`, 'g'))
+          ?.map(v => `0x${v.repeat(6 / hexString.length)}`)) || [
+        '0xff',
+        '0xff',
+        '0xff',
+      ]
+    )
+  }
   console.log('Got message, processing...')
   try {
     const frameSize = +(ctx.message.text.match(/(?<=)\d+/)?.[0] || 8)
+    const parsedFrameHex = normalizeHex(
+      ctx.message.text.match(/(?<=#)([0-f]{6}|[0-f]{3})/)?.[0] || 'FFF'
+    )
+
+    const frameColor: sharp.Color = {
+      r: +parsedFrameHex[0],
+      g: +parsedFrameHex[1],
+      b: +parsedFrameHex[2],
+    }
 
     if (frameSize > 500) {
       ctx.reply(`ОТi очем? Какие ${frameSize} пикселей??`)
@@ -34,7 +55,7 @@ bot.command('add_frame', async ctx => {
         bottom: frameSize,
         left: frameSize,
         right: frameSize,
-        background: { r: 255, g: 255, b: 255 },
+        background: frameColor,
       })
       .toBuffer()
 
