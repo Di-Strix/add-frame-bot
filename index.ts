@@ -13,6 +13,11 @@ bot.command('add_frame', async ctx => {
   try {
     const frameSize = +(ctx.message.text.match(/(?<= )\d*(?! .)/)?.[0] || 8)
 
+    if (frameSize > 500) {
+      ctx.reply(`ОТi очем? Какие ${frameSize} пикселей??`)
+      return
+    }
+
     const url = await ctx.telegram.getFileLink(
       (ctx.message.reply_to_message as any).photo.at(-1).file_id
     )
