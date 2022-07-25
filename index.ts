@@ -11,7 +11,7 @@ const bot = new Telegraf(process.env.TG_BOT_TOKEN)
 bot.command('add_frame', async ctx => {
   console.log('Got message, processing...')
   try {
-    const frameSize = +(ctx.message.text.match(/(?<= )\d*(?! .)/)?.[0] || 8)
+    const frameSize = +(ctx.message.text.match(/(?<=)\d+/)?.[0] || 8)
 
     if (frameSize > 500) {
       ctx.reply(`ОТi очем? Какие ${frameSize} пикселей??`)
