@@ -4,6 +4,8 @@
   "description": "### Bot for simply adding a white border to the photos",
   "main": "index.js",
   "scripts": {
+    "build": "tsc",
+    "serve": "node ./dist/index.js",
     "start": "ts-node index.ts"
   },
   "author": "Andrew Ushakov",
