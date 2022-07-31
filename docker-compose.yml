@@ -1,0 +1,7 @@
+services:
+  add-frame-bot:
+    container_name: add-frame-bot
+    restart: unless-stopped
+    build: .
+    env_file:
+      - ./.env
