@@ -1,7 +1,7 @@
-import 'dotenv/config'
-import { Telegraf } from 'telegraf'
 import axios from 'axios'
+import 'dotenv/config'
 import * as sharp from 'sharp'
+import { Telegraf } from 'telegraf'
 
 if (!process.env.TG_BOT_TOKEN)
   throw new Error('Please, set telegram bot token to the TG_BOT_TOKEN env var')
@@ -13,7 +13,8 @@ bot.start(ctx => {
     `
 Мои команды: 
 - add_frame - Добавить рамку к фотографии. 
-Можно дополнительно указать ширину рамки (по умолчанию - 8 пикселей) просто написав новую ширину в пикселях после команды в том же сообщении. Так же можно указать цвет рамки, задаётся в виде 24- или 48-битного HEX числа после #. Например: #00FF00`
+Можно дополнительно указать ширину рамки (по умолчанию - 8 пикселей) просто написав новую ширину в пикселях после команды в том же сообщении. 
+Так же можно указать цвет рамки, задаётся в виде 24- или 48-битного HEX числа после #. Например: #00FF00`
   )
 })
 
@@ -66,6 +67,7 @@ bot.command('add_frame', async ctx => {
         right: frameSize,
         background: frameColor,
       })
+      .resize((await photo.metadata()).width)
       .toBuffer()
 
     await ctx.replyWithPhoto({ source: buffer }, { caption: `Aparecium!` })
