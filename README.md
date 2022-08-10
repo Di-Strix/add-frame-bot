@@ -1,8 +1,14 @@
 # Add frame bot
 
-### Bot for simply adding a white border to the photos
+### Bot for simply adding a border to the photos
 
 Bot is made just for fun and coded 'in 5 minutes'. It is intended to work in groups.
+
+### Usage
+
+1. [Deploy](#deployment)
+2. Add bot to a group
+3. Reply with an `/add_frame` to a message with a photo
 
 ### Deployment
 
