@@ -32,7 +32,7 @@ bot.command(
             ?.map((v) => `0x${v.repeat(6 / hexString.length)}`)) || ['0xff', '0xff', '0xff']
       );
     };
-    const frameSize = +(ctx.message.text.match(/(?<=[^(#\d+)])\d+/)?.[0] || 8);
+    const frameSize = +(ctx.message.text.match(/(?<= )(?<=[^(#\d+)])\d+/)?.[0] || 8);
     const parsedFrameHex = normalizeHex(ctx.message.text.match(/(?<=#)([0-f]{6}|[0-f]{3})/)?.[0] || 'FFF');
 
     const frameColor: sharp.Color = {
