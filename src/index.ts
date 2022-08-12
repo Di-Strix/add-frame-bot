@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import * as sharp from 'sharp';
 import { Telegraf } from 'telegraf';
-import { withImage } from 'withImage';
+
+import { withImage } from './withImage';
 
 if (!process.env.TG_BOT_TOKEN) throw new Error('Please, set telegram bot token to the TG_BOT_TOKEN env var');
 
