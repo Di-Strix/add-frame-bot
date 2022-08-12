@@ -1,14 +1,14 @@
 import axios from 'axios';
-import sharp, { Sharp } from 'sharp';
+import * as sharp from 'sharp';
 import { Context, NarrowedContext } from 'telegraf';
 import { Message } from 'telegraf/typings/core/types/typegram';
 import { MountMap } from 'telegraf/typings/telegram-types';
 
 export const withImage = <T extends NarrowedContext<Context, MountMap['text']>>(
-  fn: (ctx: T, image: Sharp) => Promise<any>
+  fn: (ctx: T, image: sharp.Sharp) => Promise<any>
 ) => {
   return async (ctx: T) => {
-    let photo: Sharp | undefined;
+    let photo: sharp.Sharp | undefined;
     try {
       console.log('Got message, processing...');
 

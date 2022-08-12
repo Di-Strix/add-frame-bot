@@ -4,7 +4,6 @@
     "strict": true,
     "target": "ES5",
     "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
     "outDir": "./dist"
   },
   "exclude": ["node_modules"]
