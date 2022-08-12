@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "serve": "node ./dist/index.js",
-    "start": "ts-node ./src/index.ts"
+    "start": "ts-node ./src/index.ts",
+    "prepare": "husky install"
   },
   "author": "Andrew Ushakov",
   "license": "MIT",
@@ -14,7 +15,8 @@
     "@di-strix/prettier-config": "^1.0.1",
     "@types/sharp": "^0.30.4",
     "ts-node": "^10.9.1",
-    "typescript": "^4.7.4"
+    "typescript": "^4.7.4",
+    "husky": "^8.0.0"
   },
   "dependencies": {
     "axios": "^0.27.2",
