@@ -1,3 +1,5 @@
+[![Docker Image CI](https://github.com/Di-Strix/add-frame-bot/actions/workflows/docker-image-ci.yml/badge.svg)](https://github.com/Di-Strix/add-frame-bot/actions/workflows/docker-image-ci.yml)
+
 # Add frame bot
 
 ### Bot for simply adding a border to the photos
