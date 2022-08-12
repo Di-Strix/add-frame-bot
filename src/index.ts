@@ -78,4 +78,25 @@ bot.command('add_frame', async ctx => {
   }
 })
 
+bot.command('bw', async ctx => {
+  try {
+    const url: URL = await ctx.telegram.getFileLink(
+      (ctx.message.reply_to_message as any).photo.at(-1).file_id
+    )
+
+    const inputBuffer: Buffer = (
+      await axios.get(url.toString(), {responseType: 'arraybuffer'})
+    ).data as Buffer
+    
+    const outputBuffer: Buffer = await sharp(inputBuffer)
+      .toColorspace('b-w').toBuffer()
+
+    await ctx.replyWithPhoto({ source: outputBuffer }, { caption: `Aparecium!` })
+    console.log('Done, replied with image')
+  } catch (e) {
+    await ctx.reply('Фото не получено 💁')
+    console.log('Something went wrong, replied with message')
+  }
+})
+
 bot.launch().then(() => console.log('Bot has been started successfully'))
