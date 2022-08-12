@@ -12,4 +12,4 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: docker compose build . --tag add-frame-bot:$(date +%s)
+      run: docker build . -t add-frame-bot:$(date +%s)
