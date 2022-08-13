@@ -104,8 +104,10 @@ export const withMedia = <T extends ExtendedContext>(
 
       console.log(`Done, replied with ${media.type}`);
     } finally {
-      fs.rmSync(outputFilePath);
-      fs.rmSync(media.filePath);
+      const removeSafely = (path: string) => fs.existsSync(path) && fs.rmSync(path);
+
+      removeSafely(outputFilePath);
+      removeSafely(media.filePath);
       console.log('Temporary files are removed');
     }
   };
