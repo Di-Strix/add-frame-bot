@@ -9,6 +9,8 @@ import { Message, PhotoSize } from 'telegraf/typings/core/types/typegram';
 import { MountMap } from 'telegraf/typings/telegram-types';
 import { v4 as uuidV4 } from 'uuid';
 
+import { resultOf } from './helpers';
+
 type ExtendedContext = NarrowedContext<Context, MountMap['text']>;
 
 export type MediaType = 'photo' | 'video' | 'animation';
@@ -67,20 +69,44 @@ const saveMedia = <T extends ExtendedContext>(ctx: T): Promise<MediaContent> => 
   });
 };
 
-export const withMedia = <T extends ExtendedContext>(fn: (ctx: T, media: MediaContent) => Promise<any>) => {
+export const withMedia = <T extends ExtendedContext>(
+  fn: (ctx: T, media: MediaContent) => Promise<FfmpegCommand | void>
+) => {
   return async (ctx: T) => {
     console.log('Got message, processing...');
 
-    const data = await saveMedia(ctx).catch(async (e) => {
+    const media = await saveMedia(ctx).catch(async (e) => {
       await ctx.reply('Фото не получено 💁');
       console.error('Something went wrong, replied with message', e);
     });
 
-    if (data)
-      try {
-        await fn(ctx, data);
-      } finally {
-        fs.rmSync(data.filePath);
+    if (!media) return;
+
+    const outputFilePath = path.join(media.dirPath, `${media.fileName}-out.${media.fileExtension}`);
+
+    try {
+      const command = await fn(ctx, media);
+
+      if (!command) return;
+
+      await resultOf(command.save(outputFilePath));
+
+      switch (media.type) {
+        case 'animation':
+          await ctx.replyWithAnimation({ source: outputFilePath }, { caption: `Aparecium!` });
+          break;
+        case 'photo':
+          await ctx.replyWithPhoto({ source: outputFilePath }, { caption: `Aparecium!` });
+          break;
+        case 'video':
+          await ctx.replyWithVideo({ source: outputFilePath }, { caption: `Aparecium!` });
       }
+
+      console.log(`Done, replied with ${media.type}`);
+    } finally {
+      fs.rmSync(outputFilePath);
+      fs.rmSync(media.filePath);
+      console.log('Temporary files are removed');
+    }
   };
 };

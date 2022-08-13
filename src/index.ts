@@ -1,10 +1,6 @@
 import 'dotenv/config';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import { Telegraf } from 'telegraf';
 
-import { resultOf } from './helpers';
-import { withImage } from './withImage';
 import { withMedia } from './withMedia';
 
 if (!process.env.TG_BOT_TOKEN) throw new Error('Please, set telegram bot token to the TG_BOT_TOKEN env var');
@@ -46,35 +42,14 @@ bot.command(
       return;
     }
 
-    const outputFilePath = path.join(media.dirPath, `${media.fileName}-out.${media.fileExtension}`);
-
-    await resultOf(
-      media.content
-        .videoFilter([
-          {
-            filter: 'pad',
-            options: `iw+{fs}:ih+{fs}:iw-{fs}:ih-{fs}:color={clr}`
-              .replace(/{fs}/g, frameSize.toString())
-              .replace(/{clr}/g, `#${parsedFrameHex}`),
-          },
-        ])
-        .save(outputFilePath)
-    );
-
-    switch (media.type) {
-      case 'animation':
-        await ctx.replyWithAnimation({ source: outputFilePath }, { caption: `Aparecium!` });
-        break;
-      case 'photo':
-        await ctx.replyWithPhoto({ source: outputFilePath }, { caption: `Aparecium!` });
-        break;
-      case 'video':
-        await ctx.replyWithVideo({ source: outputFilePath }, { caption: `Aparecium!` });
-    }
-
-    console.log('Done, replied with image');
-
-    await fs.rm(outputFilePath);
+    return media.content.videoFilter([
+      {
+        filter: 'pad',
+        options: `iw+{fs}:ih+{fs}:iw-{fs}:ih-{fs}:color={clr}`
+          .replace(/{fs}/g, frameSize.toString())
+          .replace(/{clr}/g, `#${parsedFrameHex}`),
+      },
+    ]);
   })
 );
 
