@@ -1,5 +1,5 @@
 # Build
-FROM bitnami/node:16 AS build
+FROM node:16-alpine AS build
 WORKDIR /usr/src/add-frame-bot
 COPY package*.json ./
 RUN npm set-script prepare ''
@@ -9,10 +9,9 @@ COPY ./src ./src
 RUN npm run build
 
 # Deploy
-FROM bitnami/node:16
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update 
-RUN apt install -y ffmpeg
+FROM node:16-alpine
+RUN apk update 
+RUN apk add ffmpeg
 
 WORKDIR /usr/src/add-frame-bot
 COPY --from=build /usr/src/add-frame-bot/package*.json ./
