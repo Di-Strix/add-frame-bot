@@ -55,10 +55,13 @@ bot.command(
 
 bot.command(
   'bw',
-  withImage(async (ctx, photo) => {
-    const outputBuffer: Buffer = await photo.toColorspace('b-w').toBuffer();
-
-    await ctx.replyWithPhoto({ source: outputBuffer }, { caption: `Aparecium!` });
+  withMedia(async (ctx, media) => {
+    return media.content.videoFilter([
+      {
+        filter: 'format',
+        options: 'gray',
+      },
+    ]);
   })
 );
 
