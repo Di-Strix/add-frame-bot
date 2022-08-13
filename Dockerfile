@@ -10,6 +10,9 @@ RUN npm run build
 
 # Deploy
 FROM node:16-alpine
+RUN apk update 
+RUN apk add ffmpeg
+
 WORKDIR /usr/src/add-frame-bot
 COPY --from=build /usr/src/add-frame-bot/package*.json ./
 RUN npm ci --omit=dev
