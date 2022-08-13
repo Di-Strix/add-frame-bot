@@ -33,8 +33,8 @@ Bot is made just for fun and coded 'in 5 minutes'. It is intended to work in gro
 
 You have to reply to message with an image with this command in order to use it
 
-- `/add_frame` add frame to the image. [Parameters](#addframe-parameters)
-- `/bw` apply B/W filter to the photo (thanks to @lexst64)
+- `/add_frame` add frame to the image. [Parameters](#add_frame-parameters)
+- `/bw` apply B/W filter to the photo (thanks to [@lexst64](https://github.com/lexst64)) [Parameters](#bw-parameters)
 
 ### add_frame parameters
 
