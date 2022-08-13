@@ -1,8 +1,11 @@
 import 'dotenv/config';
-import * as sharp from 'sharp';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import { Telegraf } from 'telegraf';
 
+import { resultOf } from './helpers';
 import { withImage } from './withImage';
+import { withMedia } from './withMedia';
 
 if (!process.env.TG_BOT_TOKEN) throw new Error('Please, set telegram bot token to the TG_BOT_TOKEN env var');
 
@@ -23,42 +26,55 @@ bot.start((ctx) => {
 
 bot.command(
   'add_frame',
-  withImage(async (ctx, photo) => {
-    const normalizeHex = (hexString: string): string[] => {
+  withMedia(async (ctx, media) => {
+    const normalizeHex = (hexString: string): string => {
       return (
         ([3, 6].includes(hexString.length) &&
           hexString
             .match(new RegExp(`.{${hexString.length / 3}}`, 'g'))
-            ?.map((v) => `0x${v.repeat(6 / hexString.length)}`)) || ['0xff', '0xff', '0xff']
+            ?.map((v) => `${v.repeat(6 / hexString.length)}`)
+            .join('')) ||
+        'FFFFFF'
       );
     };
+
     const frameSize = +(ctx.message.text.match(/(?<= )(?<=[^(#\d+)])\d+/)?.[0] || 8);
     const parsedFrameHex = normalizeHex(ctx.message.text.match(/(?<=#)([0-f]{6}|[0-f]{3})/)?.[0] || 'FFF');
-
-    const frameColor: sharp.Color = {
-      r: +parsedFrameHex[0],
-      g: +parsedFrameHex[1],
-      b: +parsedFrameHex[2],
-    };
 
     if (frameSize > 500) {
       ctx.reply(`ОТi очем? Какие ${frameSize} пикселей??`);
       return;
     }
 
-    const buffer = await photo
-      .extend({
-        top: frameSize,
-        bottom: frameSize,
-        left: frameSize,
-        right: frameSize,
-        background: frameColor,
-      })
-      .resize((await photo.metadata()).width)
-      .toBuffer();
+    const outputFilePath = path.join(media.dirPath, `${media.fileName}-out.${media.fileExtension}`);
 
-    await ctx.replyWithPhoto({ source: buffer }, { caption: `Aparecium!` });
+    await resultOf(
+      media.content
+        .videoFilter([
+          {
+            filter: 'pad',
+            options: `iw+{fs}:ih+{fs}:iw-{fs}:ih-{fs}:color={clr}`
+              .replace(/{fs}/g, frameSize.toString())
+              .replace(/{clr}/g, `#${parsedFrameHex}`),
+          },
+        ])
+        .save(outputFilePath)
+    );
+
+    switch (media.type) {
+      case 'animation':
+        await ctx.replyWithAnimation({ source: outputFilePath }, { caption: `Aparecium!` });
+        break;
+      case 'photo':
+        await ctx.replyWithPhoto({ source: outputFilePath }, { caption: `Aparecium!` });
+        break;
+      case 'video':
+        await ctx.replyWithVideo({ source: outputFilePath }, { caption: `Aparecium!` });
+    }
+
     console.log('Done, replied with image');
+
+    await fs.rm(outputFilePath);
   })
 );
 
