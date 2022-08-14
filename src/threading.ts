@@ -93,18 +93,21 @@ export interface QueuedMultithreadItem<T> {
    * @type {QueuedMultithreadTask<T>}
    */
   exposed: QueuedMultithreadTask<T>;
+
   /**
    * Subject which is used to report status of the child process
    *
    * @type {ReplaySubject<MultithreadItemState>}
    */
   status$: ReplaySubject<MultithreadItemState>;
+
   /**
    * Subject which is used to forward messages from the child process
    *
    * @type {ReplaySubject<T>}
    */
   message$: ReplaySubject<T>;
+
   /**
    * Subject which is used to report task order in the queue
    *
@@ -145,6 +148,7 @@ export class MultithreadingManager {
    * @type {QueuedMultithreadItem<any>[]}
    */
   queue: QueuedMultithreadItem<any>[] = [];
+
   /**
    * Currently running tasks
    *
