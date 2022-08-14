@@ -1,4 +1,4 @@
-import { Observable, ReplaySubject, distinct } from 'rxjs';
+import { Observable, ReplaySubject, SubjectLike, distinct, filter, map } from 'rxjs';
 import { Worker } from 'worker_threads';
 
 import { isDevMode } from './helpers';
@@ -7,18 +7,40 @@ import { isDevMode } from './helpers';
  * Multithread task state.
  *
  * @export
- * @typedef {MultithreadItemState}
+ * @typedef {TaskState}
  */
-export type MultithreadItemState = 'queued' | 'starting' | 'online' | 'exited';
+export type TaskState = 'queued' | 'starting' | 'online' | 'exited';
+
+/**
+ * Used to filter task's message types. Such as `state`, `message`, etc...
+ *
+ * @export
+ * @interface TaskReport
+ * @typedef {TaskReport}
+ */
+export interface TaskReport {
+  /**
+   * Type of the report
+   *
+   * @type {('state' | 'message' | 'queueOrder')}
+   */
+  reportType: 'state' | 'message' | 'queueOrder';
+  /**
+   * Data for the report
+   *
+   * @type {*}
+   */
+  payload: any;
+}
 
 /**
  * Multithread task info required for it to be run
  *
  * @export
  * @interface MultithreadTaskInfo
- * @typedef {MultithreadTaskInfo}
+ * @typedef {TaskInfo}
  */
-export interface MultithreadTaskInfo {
+export interface TaskInfo {
   /**
    * Data to be provided to the child process.
    *
@@ -44,11 +66,11 @@ export interface MultithreadTaskInfo {
  * Returned from `queueInvoke` method
  *
  * @export
- * @interface QueuedMultithreadTask
- * @typedef {QueuedMultithreadTask}
+ * @interface QueuedTask
+ * @typedef {QueuedTask}
  * @template T Type of the message
  */
-export interface QueuedMultithreadTask<T> {
+export interface QueuedTask<T> {
   /**
    * Messages from the child process
    *
@@ -59,9 +81,9 @@ export interface QueuedMultithreadTask<T> {
   /**
    * State of the child process
    *
-   * @type {Observable<MultithreadItemState>}
+   * @type {Observable<TaskState>}
    */
-  state: Observable<MultithreadItemState>;
+  state: Observable<TaskState>;
 
   /**
    * Order of the task in the queue
@@ -73,9 +95,9 @@ export interface QueuedMultithreadTask<T> {
   /**
    * Task info required for it to be run
    *
-   * @type {MultithreadTaskInfo}
+   * @type {TaskInfo}
    */
-  info: MultithreadTaskInfo;
+  info: TaskInfo;
 }
 
 /**
@@ -83,37 +105,23 @@ export interface QueuedMultithreadTask<T> {
  *
  * @export
  * @interface QueuedMultithreadItem
- * @typedef {QueuedMultithreadItem}
+ * @typedef {QueuedTaskItem}
  * @template T Template arg for `QueuedMultithreadItem`
  */
-export interface QueuedMultithreadItem<T> {
+export interface QueuedTaskItem<T> {
   /**
    * Object that is exposed to the user of the manager
    *
-   * @type {QueuedMultithreadTask<T>}
+   * @type {QueuedTask<T>}
    */
-  exposed: QueuedMultithreadTask<T>;
+  exposed: QueuedTask<T>;
 
   /**
-   * Subject which is used to report status of the child process
+   * Unified report subject. Used to deliver messages to QueuedTask's `message`, `state`, etc...
    *
-   * @type {ReplaySubject<MultithreadItemState>}
+   * @type {ReplaySubject<TaskReport>}
    */
-  status$: ReplaySubject<MultithreadItemState>;
-
-  /**
-   * Subject which is used to forward messages from the child process
-   *
-   * @type {ReplaySubject<T>}
-   */
-  message$: ReplaySubject<T>;
-
-  /**
-   * Subject which is used to report task order in the queue
-   *
-   * @type {ReplaySubject<number>}
-   */
-  queueOrder$: ReplaySubject<number>;
+  report$: ReplaySubject<TaskReport>;
 }
 
 /**
@@ -121,11 +129,11 @@ export interface QueuedMultithreadItem<T> {
  *
  * @export
  * @interface RunningMultithreadItem
- * @typedef {RunningMultithreadItem}
+ * @typedef {RunningTaskItem}
  * @template T Template arg for the `QueuedMultithreadItem`
  * @extends {QueuedMultithreadItem<T>}
  */
-export interface RunningMultithreadItem<T> extends QueuedMultithreadItem<T> {
+export interface RunningTaskItem<T> extends QueuedTaskItem<T> {
   /**
    * Worker of the child process
    *
@@ -133,6 +141,36 @@ export interface RunningMultithreadItem<T> extends QueuedMultithreadItem<T> {
    */
   worker: Worker;
 }
+
+/**
+ * Shortcut for reporting status of the task
+ *
+ * @param {SubjectLike<TaskReport>} reporter
+ * @param {TaskState} state
+ * @returns {*}
+ */
+const reportStatus = (reporter: SubjectLike<TaskReport>, state: TaskState) =>
+  reporter.next({ reportType: 'state', payload: state });
+
+/**
+ * Shortcut for reporting messages from the task
+ *
+ * @param {SubjectLike<TaskReport>} reporter
+ * @param {*} msg
+ * @returns {*}
+ */
+const reportMessage = (reporter: SubjectLike<TaskReport>, msg: any) =>
+  reporter.next({ reportType: 'message', payload: msg });
+
+/**
+ * Shortcut for reporting queue order of the task
+ *
+ * @param {SubjectLike<TaskReport>} reporter
+ * @param {number} order
+ * @returns {*}
+ */
+const reportQueueOrder = (reporter: SubjectLike<TaskReport>, order: number) =>
+  reporter.next({ reportType: 'queueOrder', payload: order });
 
 /**
  * Multithread manager is used to comfortably manage and limit running background tasks
@@ -145,16 +183,16 @@ export class MultithreadingManager {
   /**
    * Tasks queue
    *
-   * @type {QueuedMultithreadItem<any>[]}
+   * @type {QueuedTaskItem<any>[]}
    */
-  queue: QueuedMultithreadItem<any>[] = [];
+  queue: QueuedTaskItem<any>[] = [];
 
   /**
    * Currently running tasks
    *
-   * @type {RunningMultithreadItem<any>[]}
+   * @type {RunningTaskItem<any>[]}
    */
-  running: RunningMultithreadItem<any>[] = [];
+  running: RunningTaskItem<any>[] = [];
 
   /**
    * Maximum count of running workers
@@ -177,29 +215,35 @@ export class MultithreadingManager {
    * Queues task for invocation. The task will be invoked ASAP
    *
    * @template T any by default. Type of the messages sent from child process
-   * @param {MultithreadTaskInfo} info
-   * @returns {QueuedMultithreadTask<T>}
+   * @param {TaskInfo} info
+   * @returns {QueuedTask<T>}
    */
-  queueInvoke<T = any>(info: MultithreadTaskInfo): QueuedMultithreadTask<T> {
-    const status$ = new ReplaySubject<MultithreadItemState>(1);
-    const message$ = new ReplaySubject<T>(1);
-    const queueOrder$ = new ReplaySubject<number>(1);
+  queueInvoke<T = any>(info: TaskInfo): QueuedTask<T> {
+    const report$ = new ReplaySubject<TaskReport>(1);
 
-    const exposed: QueuedMultithreadTask<T> = {
+    const exposed: QueuedTask<T> = {
       info,
-      message: message$.asObservable(),
-      state: status$.asObservable(),
-      queueOrder: queueOrder$.asObservable().pipe(distinct()),
+      message: report$.asObservable().pipe(
+        filter(({ reportType }) => reportType === 'message'),
+        map(({ payload }) => payload as T)
+      ),
+      state: report$.asObservable().pipe(
+        filter(({ reportType }) => reportType === 'state'),
+        map(({ payload }) => payload as TaskState)
+      ),
+      queueOrder: report$.asObservable().pipe(
+        filter(({ reportType }) => reportType === 'queueOrder'),
+        map(({ payload }) => payload as number),
+        distinct()
+      ),
     };
 
-    const item: QueuedMultithreadItem<T> = {
+    const item: QueuedTaskItem<T> = {
       exposed,
-      message$,
-      status$,
-      queueOrder$,
+      report$,
     };
 
-    status$.next('queued');
+    reportStatus(report$, 'queued');
 
     this.queue.push(item);
 
@@ -219,7 +263,7 @@ export class MultithreadingManager {
 
       if (!item) break;
 
-      item.status$.next('starting');
+      reportStatus(item.report$, 'starting');
 
       const worker = new Worker(item.exposed.info.scriptPath, {
         workerData: item.exposed.info.arg,
@@ -227,23 +271,21 @@ export class MultithreadingManager {
       });
 
       worker.on('online', () => {
-        item.status$.next('online');
+        reportStatus(item.report$, 'online');
       });
 
       worker.on('message', (msg) => {
-        item.message$.next(msg);
+        reportMessage(item.report$, msg);
       });
 
       worker.on('error', (e) => {
-        item.message$.error(e);
+        item.report$.error(e);
       });
 
       worker.on('exit', (e) => {
-        item.status$.next('exited');
+        reportStatus(item.report$, 'exited');
 
-        item.status$.complete();
-        item.message$.complete();
-        item.queueOrder$.complete();
+        item.report$.complete();
 
         this.running = this.running.filter((item) => item.worker !== worker);
 
@@ -262,6 +304,6 @@ export class MultithreadingManager {
    * @private
    */
   private updateQueueOrder() {
-    this.queue.forEach(({ queueOrder$ }, index) => queueOrder$.next(index + 1));
+    this.queue.forEach(({ report$ }, index) => reportQueueOrder(report$, index + 1));
   }
 }
