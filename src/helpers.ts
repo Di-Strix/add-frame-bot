@@ -10,3 +10,6 @@ export const resultOf = <T extends FfmpegCommand>(command: T): Promise<void> =>
       reject(err);
     });
   });
+
+export const isDevMode = () => process.env.NODE_ENV === 'development';
+export const isProdMode = () => !isDevMode();
