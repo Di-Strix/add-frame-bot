@@ -1,4 +1,4 @@
-import { Observable, ReplaySubject, SubjectLike, distinct, filter, map } from 'rxjs';
+import { Observable, ReplaySubject, Subject, SubjectLike, distinct, filter, map, shareReplay, startWith } from 'rxjs';
 import { Worker } from 'worker_threads';
 
 import { isDevMode } from './helpers';
@@ -119,9 +119,9 @@ export interface QueuedTaskItem<T> {
   /**
    * Unified report subject. Used to deliver messages to QueuedTask's `message`, `state`, etc...
    *
-   * @type {ReplaySubject<TaskReport>}
+   * @type {Subject<TaskReport>}
    */
-  report$: ReplaySubject<TaskReport>;
+  report$: Subject<TaskReport>;
 }
 
 /**
@@ -219,22 +219,27 @@ export class MultithreadingManager {
    * @returns {QueuedTask<T>}
    */
   queueInvoke<T = any>(info: TaskInfo): QueuedTask<T> {
-    const report$ = new ReplaySubject<TaskReport>(1);
+    const report$ = new Subject<TaskReport>();
 
     const exposed: QueuedTask<T> = {
       info,
       message: report$.asObservable().pipe(
         filter(({ reportType }) => reportType === 'message'),
-        map(({ payload }) => payload as T)
+        map(({ payload }) => payload as T),
+        shareReplay(1)
       ),
       state: report$.asObservable().pipe(
         filter(({ reportType }) => reportType === 'state'),
-        map(({ payload }) => payload as TaskState)
+        map(({ payload }) => payload as TaskState),
+        startWith('queued' as TaskState),
+        shareReplay(1)
       ),
       queueOrder: report$.asObservable().pipe(
         filter(({ reportType }) => reportType === 'queueOrder'),
         map(({ payload }) => payload as number),
-        distinct()
+        distinct(),
+        startWith(1),
+        shareReplay(1)
       ),
     };
 
@@ -242,8 +247,6 @@ export class MultithreadingManager {
       exposed,
       report$,
     };
-
-    reportStatus(report$, 'queued');
 
     this.queue.push(item);
 
