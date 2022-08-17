@@ -10,6 +10,7 @@ import { MountMap } from 'telegraf/typings/telegram-types';
 import { v4 as uuidV4 } from 'uuid';
 
 import { resultOf } from './helpers';
+import { TaskManager } from './tasking';
 
 type ExtendedContext = NarrowedContext<Context, MountMap['text']>;
 
@@ -23,6 +24,8 @@ export interface MediaContent {
   fileName: string;
   fileExtension: string;
 }
+
+const taskManager = new TaskManager();
 
 const saveMedia = <T extends ExtendedContext>(ctx: T): Promise<MediaContent> => {
   return new Promise(async (resolve, reject) => {
@@ -72,43 +75,50 @@ const saveMedia = <T extends ExtendedContext>(ctx: T): Promise<MediaContent> => 
 export const withMedia = <T extends ExtendedContext>(
   fn: (ctx: T, media: MediaContent) => Promise<FfmpegCommand | void>
 ) => {
-  return async (ctx: T) => {
-    console.log('Got message, processing...');
+  return (ctx: T) => {
+    (async () => {
+      console.log('Got message, processing...');
 
-    const media = await saveMedia(ctx).catch(async (e) => {
-      await ctx.reply('Фото не получено 💁');
-      console.error('Something went wrong, replied with message', e);
-    });
+      const media = await saveMedia(ctx).catch(async (e) => {
+        await ctx.reply('Фото не получено 💁');
+        console.error('Something went wrong, replied with message', e);
+      });
 
-    if (!media) return;
+      if (!media) return;
 
-    const outputFilePath = path.join(media.dirPath, `${media.fileName}-out.${media.fileExtension}`);
+      await taskManager.queueTask({
+        id: media.type,
+        commandCaller: async () => {
+          const outputFilePath = path.join(media.dirPath, `${media.fileName}-out.${media.fileExtension}`);
 
-    try {
-      const command = await fn(ctx, media);
+          try {
+            const command = await fn(ctx, media);
 
-      if (!command) return;
+            if (!command) return;
 
-      await resultOf(command.save(outputFilePath));
+            await resultOf(command.save(outputFilePath));
 
-      switch (media.type) {
-        case 'animation':
-          await ctx.replyWithAnimation({ source: outputFilePath }, { caption: `Aparecium!` });
-          break;
-        case 'photo':
-          await ctx.replyWithPhoto({ source: outputFilePath }, { caption: `Aparecium!` });
-          break;
-        case 'video':
-          await ctx.replyWithVideo({ source: outputFilePath }, { caption: `Aparecium!` });
-      }
+            switch (media.type) {
+              case 'animation':
+                await ctx.replyWithAnimation({ source: outputFilePath }, { caption: `Aparecium!` });
+                break;
+              case 'photo':
+                await ctx.replyWithPhoto({ source: outputFilePath }, { caption: `Aparecium!` });
+                break;
+              case 'video':
+                await ctx.replyWithVideo({ source: outputFilePath }, { caption: `Aparecium!` });
+            }
 
-      console.log(`Done, replied with ${media.type}`);
-    } finally {
-      const removeSafely = (path: string) => fs.existsSync(path) && fs.rmSync(path);
+            console.log(`Done, replied with ${media.type}`);
+          } finally {
+            const removeSafely = (path: string) => fs.existsSync(path) && fs.rmSync(path);
 
-      removeSafely(outputFilePath);
-      removeSafely(media.filePath);
-      console.log('Temporary files are removed');
-    }
+            removeSafely(outputFilePath);
+            removeSafely(media.filePath);
+            console.log('Temporary files are removed');
+          }
+        },
+      });
+    })();
   };
 };

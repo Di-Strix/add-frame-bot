@@ -1,4 +1,8 @@
+interface TaskParam {
+  maxCalls: number;
+  id: string;
+}
+
 export interface BotConfig {
-  videoMaxThreads: number;
-  photoMaxThreads: number;
+  taskParams: TaskParam[];
 }

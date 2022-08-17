@@ -1,6 +1,9 @@
 import { BotConfig } from './bot-config.interface';
 
 export const botConfig: BotConfig = {
-  videoMaxThreads: 2,
-  photoMaxThreads: 1,
+  taskParams: [
+    { id: 'photo', maxCalls: 1 },
+    { id: 'animation', maxCalls: 1 },
+    { id: 'video', maxCalls: 2 },
+  ],
 };
